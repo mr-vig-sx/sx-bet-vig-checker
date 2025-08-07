@@ -34,28 +34,24 @@ def fetch_best_odds(market_hash, league_id, base_token="0x6629Ce1Cf35Cc1329ebB4F
                 outcome_one_odds = int(odds_data.get('outcomeOne', {}).get('percentageOdds', 0))
                 outcome_two_odds = int(odds_data.get('outcomeTwo', {}).get('percentageOdds', 0))
                 
-                # Convert from percentage with 18 trailing figures to decimal
+                # Convert from percentage with 18 trailing figures to actual percentage
                 # Example: 43750000000000000000 -> 43.75%
                 outcome_a_percent = outcome_one_odds / (10 ** 18)
                 outcome_b_percent = outcome_two_odds / (10 ** 18)
                 
-                # Convert percentage odds to decimal odds
-                # If percentage is 43.75%, decimal odds = 100/43.75 = 2.29
-                outcome_a_decimal = 100 / outcome_a_percent if outcome_a_percent > 0 else 0
-                outcome_b_decimal = 100 / outcome_b_percent if outcome_b_percent > 0 else 0
+                # Convert to taker view: 100 - percentage
+                # API gives maker view, we need taker view
+                outcome_a_taker = 100 - outcome_a_percent
+                outcome_b_taker = 100 - outcome_b_percent
                 
-                # Calculate implied probabilities (1/decimal_odds)
-                outcome_a_implied = 1 / outcome_a_decimal if outcome_a_decimal > 0 else 0
-                outcome_b_implied = 1 / outcome_b_decimal if outcome_b_decimal > 0 else 0
-                
-                # Calculate vig: (1 - implied_probability_A) + (1 - implied_probability_B)
-                vig_percentage = (1 - outcome_a_implied) + (1 - outcome_b_implied)
+                # Calculate vig: (outcome_a_taker + outcome_b_taker - 100)
+                vig_percentage = (outcome_a_taker + outcome_b_taker - 100)
                 
                 return {
-                    'outcome_a_odds': outcome_a_implied * 100,  # Convert to percentage for display
-                    'outcome_b_odds': outcome_b_implied * 100,  # Convert to percentage for display
-                    'total_probability': (outcome_a_implied + outcome_b_implied) * 100,  # Total implied probability
-                    'vig_percentage': vig_percentage * 100,  # Convert vig to percentage for display
+                    'outcome_a_odds': outcome_a_taker,  # Taker view percentage
+                    'outcome_b_odds': outcome_b_taker,  # Taker view percentage
+                    'total_probability': outcome_a_taker + outcome_b_taker,  # Total percentage
+                    'vig_percentage': vig_percentage,  # Vig percentage
                     'best_odds_data': best_odds  # Return raw data for batch processing
                 }
             else:
